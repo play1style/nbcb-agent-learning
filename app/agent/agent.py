@@ -16,6 +16,7 @@ from app.models.schemas import (
     ChatResponse,
     ToolCallInfo,
 )
+from app.knowledge_base.data import knowledge_base
 from app.security.input_sanitizer import input_sanitizer
 from app.security.output_desensitizer import output_desensitizer
 from app.tools.registry import tool_registry
@@ -23,6 +24,12 @@ from app.tools.registry import tool_registry
 # 注册工具（触发装饰器）
 import app.tools.search_policy  # noqa: F401
 import app.tools.calculate_loan  # noqa: F401
+
+# ========== 知识库有效来源列表（防幻觉） ==========
+_VALID_SOURCES: set[str] = set()
+for _rule in knowledge_base.rules:
+    _VALID_SOURCES.add(f"[{_rule.document}:{_rule.section}]")
+
 
 # 系统提示词模板
 SYSTEM_PROMPT = """你是银行合规智能助手，一个专业、严谨的银行合规岗位辅助AI系统。
@@ -33,10 +40,13 @@ SYSTEM_PROMPT = """你是银行合规智能助手，一个专业、严谨的银�
 - 所有回答必须基于已掌握的制度和数据，不得编造信息
 
 ## 回答规范
-1. **溯源要求**：每个关键事实必须标注来源，格式为 [来源文档:章节号]
-2. **信息不足时**：明确回复"根据现有知识库无法确认，请咨询相关部门"
-3. **语言风格**：专业、简洁、清晰
-4. **输出格式**：使用结构化文本，便于阅读
+1. **溯源要求**：每个关键事实必须标注来源，格式为 [来源文档:章节号]，例如 [信贷业务制度:4.1]
+2. **严禁编造来源**：只能引用 search_policy 工具实际返回的 source_tag 值，禁止编造任何不存在的文档名、章节号或来源格式
+3. **信息不足时**：明确回复"根据现有知识库无法确认，请咨询相关部门"
+4. **语言风格**：专业、简洁、清晰
+
+## 当前知识库包含以下来源
+{available_sources}
 
 ## 可用工具
 {tool_descriptions}
@@ -45,8 +55,8 @@ SYSTEM_PROMPT = """你是银行合规智能助手，一个专业、严谨的银�
 - 如果用户询问制度规定类问题，使用search_policy工具检索
 - 如果用户询问贷款计算类问题，使用calculate_loan工具计算
 - 如果同时涉及制度查询和计算，先检索再计算
-- 检索到相关条款后，引用来源并基于条款内容回答
-- 如果检索结果与问题不相关，回答"根据现有知识库无法确认，请咨询相关部门"
+- **引用来源的强制规则**：你只能在 search_policy 返回结果的 source_tag 字段中选择引用，严禁编造任何不存在的来源名称
+- 如果检索结果与问题不相关或为空，直接回复"根据现有知识库无法确认，请咨询相关部门"
 """
 
 
@@ -134,8 +144,10 @@ class ComplianceAgent:
             )
 
         # Step 2: 调用LLM进行意图识别和工具选择
+        _source_list = "\n".join(f"  - {s}" for s in sorted(_VALID_SOURCES))
         system_prompt = SYSTEM_PROMPT.format(
-            tool_descriptions=self._tool_descriptions
+            tool_descriptions=self._tool_descriptions,
+            available_sources=_source_list,
         )
 
         messages = [
@@ -185,8 +197,13 @@ class ComplianceAgent:
                     "content": (
                         f"工具 '{tool_name}' 的返回结果如下：\n"
                         f"{result_str}\n\n"
-                        "请基于以上结果，给出专业、完整的回答，"
-                        "并在关键事实后标注来源 [来源文档:章节号]。"
+                        "请基于以上结果给出专业回答。\n"
+                        "强制约束（必须遵守）：\n"
+                        "1. 你只能引用上述返回结果中 source_tag 字段包含的来源标签\n"
+                        "2. 引用格式为 [文档名:章节号]，例如 [信贷业务制度:4.1]\n"
+                        "3. 严禁编造任何返回结果中不存在的来源\n"
+                        "4. 如果返回结果为空或与问题不相关，"
+                        "回复'根据现有知识库无法确认，请咨询相关部门'"
                     ),
                 }
             )
@@ -201,18 +218,37 @@ class ComplianceAgent:
             # 检查是否还有新的工具调用
             tool_call = _parse_tool_call(assistant_reply)
 
-        # Step 4: 提取引用来源
-        sources = re.findall(r"\[([^\]]+)\]", assistant_reply)
-        sources = [s.strip() for s in sources if ":" in s]
+        # Step 4: 过滤虚假来源（防幻觉）
+        # 删除所有知识库中不存在的来源标注
+        def _filter_fake_sources(text: str) -> tuple[str, list[str]]:
+            valid: list[str] = []
+            
+            def _replace_fake(m: re.Match) -> str:
+                full = m.group(0)
+                inner = m.group(1).strip()
+                # 去除 "来源文档:" 前缀
+                inner = re.sub(r"^来源文档[:：\s]*", "", inner)
+                tag = f"[{inner}]"
+                if tag in _VALID_SOURCES:
+                    valid.append(inner)
+                    # 保留原始引用但统一格式
+                    return f"[{inner}]"
+                return ""
+            
+            # 匹配所有 [xxx:yyy] 格式的来源标注
+            filtered = re.sub(r"\[([^\]]*?:[^\]]*?)\]", _replace_fake, text)
+            return filtered, valid
+
+        filtered_answer, valid_sources = _filter_fake_sources(assistant_reply)
 
         # Step 5: 输出脱敏
-        final_answer = output_desensitizer.desensitize(assistant_reply)
+        final_answer = output_desensitizer.desensitize(filtered_answer)
 
         elapsed = (time.time() - start_time) * 1000
 
         return ChatResponse(
             answer=final_answer,
-            sources=sources,
+            sources=valid_sources,
             tool_calls=tool_calls,
             processing_time_ms=round(elapsed, 2),
             injection_detected=False,

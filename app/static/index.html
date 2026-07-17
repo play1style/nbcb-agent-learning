@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>银行合规智能助手</title>
+<style>
+/* ========== CSS 变量 & 重置 ========== */
+:root {
+  --navy: #1a2a4a;
+  --navy-light: #2a3f6a;
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --accent: #0ea5e9;
+  --success: #059669;
+  --danger: #dc2626;
+  --warning: #d97706;
+  --bg: #f1f5f9;
+  --surface: #ffffff;
+  --text: #1e293b;
+  --text-secondary: #64748b;
+  --text-light: #94a3b8;
+  --border: #e2e8f0;
+  --border-light: #f1f5f9;
+  --radius: 10px;
+  --radius-lg: 16px;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+  --shadow-lg: 0 4px 12px rgba(0,0,0,0.1);
+  --transition: 0.2s ease;
+  --header-h: 60px;
+  --input-h: 80px;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.6;
+}
+
+/* ========== 顶部导航 ========== */
+.header {
+  background: linear-gradient(135deg, var(--navy), var(--navy-light));
+  color: #fff;
+  height: var(--header-h);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  flex-shrink: 0;
+  gap: 14px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  z-index: 10;
+}
+.header-icon {
+  width: 34px; height: 34px;
+  background: rgba(255,255,255,0.15);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+.header h1 {
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+.header .subtitle {
+  font-size: 12px;
+  opacity: 0.7;
+  margin-top: -1px;
+}
+.header-right {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+}
+.badge {
+  font-size: 11px;
+  background: rgba(255,255,255,0.12);
+  padding: 3px 10px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ========== 主聊天区 ========== */
+.chat-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 16px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  scroll-behavior: smooth;
+}
+.chat-container::-webkit-scrollbar { width: 6px; }
+.chat-container::-webkit-scrollbar-track { background: transparent; }
+.chat-container::-webkit-scrollbar-thumb { background: var(--text-light); border-radius: 3px; }
+
+/* ========== 欢迎页 ========== */
+.welcome {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  flex: 1;
+  padding: 40px 20px;
+  color: var(--text-secondary);
+}
+.welcome-icon {
+  width: 72px; height: 72px;
+  background: var(--border-light);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  margin-bottom: 20px;
+  color: var(--primary);
+}
+.welcome h2 {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+.welcome p {
+  max-width: 420px;
+  font-size: 14px;
+  line-height: 1.7;
+}
+.suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 20px;
+  max-width: 480px;
+}
+.suggestion-btn {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 8px 16px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all var(--transition);
+  color: var(--text-secondary);
+}
+.suggestion-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: #eff6ff;
+  box-shadow: var(--shadow);
+}
+
+/* ========== 消息气泡 ========== */
+.message {
+  display: flex;
+  gap: 10px;
+  max-width: 90%;
+  animation: msgIn 0.25s ease;
+}
+@keyframes msgIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.message.user {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+}
+.message.assistant { align-self: flex-start; }
+.message.system-error { align-self: center; }
+.msg-avatar {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+}
+.message.user .msg-avatar { background: var(--primary); color: #fff; }
+.message.assistant .msg-avatar { background: var(--navy); color: #fff; }
+.msg-content {
+  padding: 12px 16px;
+  border-radius: var(--radius-lg);
+  font-size: 14px;
+  line-height: 1.7;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+.message.user .msg-content {
+  background: var(--primary);
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+.message.assistant .msg-content {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  border-bottom-left-radius: 4px;
+}
+.msg-content p { margin-bottom: 8px; }
+.msg-content p:last-child { margin-bottom: 0; }
+.msg-content strong, .msg-content b { font-weight: 600; }
+.msg-content ul, .msg-content ol { padding-left: 20px; margin: 6px 0; }
+.msg-content li { margin-bottom: 4px; }
+.msg-content code {
+  background: #f1f5f9;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-family: "SF Mono", "Cascadia Code", Consolas, monospace;
+}
+.msg-content pre {
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px;
+  overflow-x: auto;
+  margin: 8px 0;
+  font-size: 13px;
+}
+
+/* ========== 来源标签 ========== */
+.sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-light);
+}
+.source-tag {
+  font-size: 12px;
+  background: #eff6ff;
+  color: var(--primary);
+  padding: 2px 10px;
+  border-radius: 12px;
+  border: 1px solid #bfdbfe;
+  cursor: default;
+}
+.source-tag.compliance {
+  background: #f0fdf4;
+  color: var(--success);
+  border-color: #bbf7d0;
+}
+
+/* ========== 工具调用信息 ========== */
+.tool-calls {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border-light);
+}
+.tool-call-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: #f8fafc;
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+
+/* ========== 注入警告 ========== */
+.message.system-error .msg-content {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: var(--danger);
+  text-align: center;
+  font-size: 13px;
+  max-width: 460px;
+}
+
+/* ========== 加载动画 ========== */
+.loading-dots {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px 0;
+}
+.loading-dots span {
+  width: 8px; height: 8px;
+  background: var(--text-light);
+  border-radius: 50%;
+  animation: dotPulse 1.2s infinite ease-in-out;
+}
+.loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+.loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes dotPulse {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
+/* ========== 输入区 ========== */
+.input-area {
+  flex-shrink: 0;
+  padding: 12px 16px 16px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+}
+.input-wrapper {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  max-width: 720px;
+  margin: 0 auto;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 8px 12px;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+.input-wrapper:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+}
+.input-wrapper textarea {
+  flex: 1;
+  border: none;
+  background: transparent;
+  resize: none;
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.5;
+  max-height: 100px;
+  outline: none;
+  color: var(--text);
+  padding: 4px 0;
+}
+.input-wrapper textarea::placeholder { color: var(--text-light); }
+.send-btn {
+  width: 38px; height: 38px;
+  border: none;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+  transition: all var(--transition);
+}
+.send-btn:hover { background: var(--primary-hover); transform: scale(1.05); }
+.send-btn:disabled { background: var(--text-light); cursor: not-allowed; transform: none; }
+.input-hint {
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-light);
+  margin-top: 6px;
+}
+
+/* ========== 响应式 ========== */
+@media (max-width: 640px) {
+  .message { max-width: 100%; }
+  .header { padding: 0 12px; }
+  .header h1 { font-size: 15px; }
+  .badge { display: none; }
+  .chat-container { padding: 12px 10px 4px; }
+  .input-area { padding: 8px 10px 12px; }
+  .suggestions { flex-direction: column; align-items: stretch; }
+  .welcome-icon { width: 56px; height: 56px; font-size: 24px; }
+}
+
+/* ========== 打印友好 ========== */
+@media print {
+  .input-area, .header-right, .suggestions, .send-btn { display: none; }
+  body { height: auto; overflow: visible; }
+  .chat-container { overflow: visible; height: auto; }
+}
+</style>
+</head>
+<body>
+
+<!-- 顶部栏 -->
+<header class="header">
+  <div class="header-icon">&#x2696;</div>
+  <div>
+    <h1>银行合规智能助手</h1>
+    <div class="subtitle">合规制度查询 · 贷款计算</div>
+  </div>
+  <div class="header-right">
+    <span class="badge">&#x1F512; 安全接入</span>
+    <span class="badge">v1.0</span>
+  </div>
+</header>
+
+<!-- 聊天区 -->
+<div class="chat-container" id="chatContainer" role="log" aria-label="对话区域">
+  <div class="welcome" id="welcome">
+    <div class="welcome-icon">&#x1F4CB;</div>
+    <h2>有什么可以帮您？</h2>
+    <p>
+      我是银行合规智能助手，可以查询信贷制度和合规手册，
+      也可以帮您计算贷款月供和总利息。
+    </p>
+    <div class="suggestions">
+      <button class="suggestion-btn" data-query="贷款审批流程是什么">贷款审批流程</button>
+      <button class="suggestion-btn" data-query="首套房认定标准">首套房认定标准</button>
+      <button class="suggestion-btn" data-query="不良贷款认定标准">不良贷款认定</button>
+      <button class="suggestion-btn" data-query="计算100万贷款，年利率3.5%，期限30年">贷款计算</button>
+      <button class="suggestion-btn" data-query="担保贷款有哪些形式">担保贷款形式</button>
+    </div>
+  </div>
+</div>
+
+<!-- 输入区 -->
+<div class="input-area">
+  <div class="input-wrapper">
+    <textarea id="chatInput" rows="1" placeholder="请输入您的问题，如"贷款审批流程是什么"..." aria-label="输入问题"></textarea>
+    <button class="send-btn" id="sendBtn" aria-label="发送" disabled>&#x27A4;</button>
+  </div>
+  <div class="input-hint">Enter 发送 · Shift+Enter 换行</div>
+</div>
+
+<script>
+// ========== 状态管理 ==========
+const state = {
+  userId: 'user_' + Math.random().toString(36).slice(2, 10),
+  isLoading: false,
+};
+
+// ========== DOM 引用 ==========
+const container = document.getElementById('chatContainer');
+const input = document.getElementById('chatInput');
+const sendBtn = document.getElementById('sendBtn');
+const welcome = document.getElementById('welcome');
+
+// ========== 工具函数 ==========
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+
+function scrollToBottom() {
+  requestAnimationFrame(() => { container.scrollTop = container.scrollHeight; });
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// 简单的 markdown 渲染（支持 **粗体**、`行内代码`、代码块、列表、编号列表）
+function renderMarkdown(text) {
+  // 基于块级处理的 Markdown 渲染
+  // 1. 先转义 HTML
+  let html = escapeHtml(text);
+  // 2. 保护代码块 (```...```) 为占位符
+  const codeBlocks = [];
+    html = html.replace(/```(\w*)\n?([\s\S]*?)```/g, function(m, lang, code) {
+    const idx = codeBlocks.length;
+    codeBlocks.push('<pre><code>' + code.trim() + '</code></pre>');
+    return '\x00CODE' + idx + '\x00';
+  });
+  // 3. 按双换行切分为块
+  var blocks = html.split(/\n\s*\n/);
+  var out = [];
+  for (var b = 0; b < blocks.length; b++) {
+    var block = blocks[b].trim();
+    if (!block) continue;
+    // 3a. 标题 # ~ ######
+    var hMatch = block.match(/^(#{1,6})\s+(.+)/);
+    if (hMatch) {
+      out.push('<h' + hMatch[1].length + '>' + inlineMd(hMatch[2]) + '</h' + hMatch[1].length + '>');
+      continue;
+    }
+    // 3b. 分割行，判断是否为列表块
+    var lines = block.split('\n');
+    var orderItems = [], bulletItems = [];
+    var isOrdered = true, isBullet = true;
+    for (var i = 0; i < lines.length; i++) {
+      var l = lines[i].trim();
+      if (!l) { isOrdered = false; isBullet = false; break; }
+      var oMatch = l.match(/^(\d+)[\.\uff09]\s+(.+)/);
+      var bMatch = l.match(/^[-\u2022\*]\s+(.+)/);
+      if (!oMatch) isOrdered = false;
+      if (!bMatch) isBullet = false;
+      if (oMatch) orderItems.push(inlineMd(oMatch[2]));
+      if (bMatch) bulletItems.push(inlineMd(bMatch[1]));
+    }
+    if (isOrdered && orderItems.length > 0) {
+      var items = '';
+      for (var i = 0; i < orderItems.length; i++) {
+        items += '<li>' + orderItems[i] + '</li>';
+      }
+      out.push('<ol>' + items + '</ol>');
+      continue;
+    }
+    if (isBullet && bulletItems.length > 0) {
+      var items = '';
+      for (var i = 0; i < bulletItems.length; i++) {
+        items += '<li>' + bulletItems[i] + '</li>';
+      }
+      out.push('<ul>' + items + '</ul>');
+      continue;
+    }
+    // 3c. 默认段落（保留内部分行）
+    out.push('<p>' + inlineMd(block.replace(/\n/g, '<br>')) + '</p>');
+  }
+  // 4. 还原代码块
+  var result = out.join('\n');
+  result = result.replace(/\x00CODE(\d+)\x00/g, function(m, idx) {
+    return codeBlocks[parseInt(idx)] || '';
+  });
+  return result;
+}
+
+// 行内元素渲染（粗体、行内代码、链接）
+function inlineMd(str) {
+  return str
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+}
+
+
+function formatTimestamp() {
+  return new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+}
+
+// ========== 消息渲染 ==========
+function addMessage(type, content, extra) {
+  welcome?.remove();
+
+  const msg = document.createElement('div');
+  msg.className = 'message ' + type;
+
+  const avatar = document.createElement('div');
+  avatar.className = 'msg-avatar';
+  avatar.textContent = type === 'user' ? 'U' : type === 'system-error' ? '!' : 'A';
+
+  const bubble = document.createElement('div');
+  bubble.className = 'msg-content';
+
+  if (type === 'system-error') {
+    bubble.textContent = content;
+  } else if (type === 'user') {
+    bubble.textContent = content;
+  } else {
+    bubble.innerHTML = renderMarkdown(content);
+
+    // 来源标签
+    if (extra?.sources?.length) {
+      const srcDiv = document.createElement('div');
+      srcDiv.className = 'sources';
+      extra.sources.forEach(src => {
+        const tag = document.createElement('span');
+        tag.className = 'source-tag';
+        if (src.includes('合规')) tag.classList.add('compliance');
+        tag.textContent = '\uD83D\uDCC4 ' + src;
+        srcDiv.appendChild(tag);
+      });
+      bubble.appendChild(srcDiv);
+    }
+
+    // 工具调用
+    if (extra?.toolCalls?.length) {
+      const tcDiv = document.createElement('div');
+      tcDiv.className = 'tool-calls';
+      extra.toolCalls.forEach(tc => {
+        const badge = document.createElement('span');
+        badge.className = 'tool-call-badge';
+        badge.textContent = '\u2699\uFE0F ' + tc.tool_name;
+        tcDiv.appendChild(badge);
+      });
+      bubble.appendChild(tcDiv);
+    }
+  }
+
+  msg.appendChild(avatar);
+  msg.appendChild(bubble);
+  container.appendChild(msg);
+  scrollToBottom();
+}
+
+function addLoading() {
+  const msg = document.createElement('div');
+  msg.className = 'message assistant';
+  msg.id = 'loadingMsg';
+
+  const avatar = document.createElement('div');
+  avatar.className = 'msg-avatar';
+  avatar.textContent = 'A';
+
+  const bubble = document.createElement('div');
+  bubble.className = 'msg-content';
+  bubble.innerHTML = '<div class="loading-dots"><span></span><span></span><span></span></div>';
+
+  msg.appendChild(avatar);
+  msg.appendChild(bubble);
+  container.appendChild(msg);
+  scrollToBottom();
+}
+
+function removeLoading() {
+  document.getElementById('loadingMsg')?.remove();
+}
+
+// ========== API 调用 ==========
+async function sendMessage(query) {
+  if (!query.trim() || state.isLoading) return;
+  state.isLoading = true;
+  sendBtn.disabled = true;
+  input.disabled = true;
+
+  const q = query.trim();
+  input.value = '';
+  input.style.height = 'auto';
+
+  addMessage('user', q);
+  addLoading();
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: q, user_id: state.userId }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: '服务异常' }));
+      throw new Error(err.detail || `HTTP ${res.status}`);
+    }
+
+    const data = await res.json();
+    removeLoading();
+
+    if (data.injection_detected) {
+      addMessage('system-error', '\u26A0\uFE0F ' + data.answer);
+    } else {
+      addMessage('assistant', data.answer, {
+        sources: data.sources || [],
+        toolCalls: data.tool_calls || [],
+      });
+    }
+  } catch (err) {
+    removeLoading();
+    let msg = err.message || '网络请求失败';
+    if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
+      msg = '无法连接到服务器，请检查服务是否已启动。';
+    }
+    addMessage('system-error', '\u274C 请求失败：' + msg);
+  } finally {
+    state.isLoading = false;
+    sendBtn.disabled = false;
+    input.disabled = false;
+    input.focus();
+  }
+}
+
+// ========== 事件绑定 ==========
+input.addEventListener('input', function() {
+  this.style.height = 'auto';
+  this.style.height = Math.min(this.scrollHeight, 100) + 'px';
+  sendBtn.disabled = !this.value.trim() || state.isLoading;
+});
+
+input.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage(this.value);
+  }
+});
+
+sendBtn.addEventListener('click', () => sendMessage(input.value));
+
+// 快捷建议按钮
+document.querySelectorAll('.suggestion-btn').forEach(btn => {
+  btn.addEventListener('click', () => sendMessage(btn.dataset.query));
+});
+
+// ========== 启动焦点 ==========
+input.focus();
+</script>
+</body>
+</html>

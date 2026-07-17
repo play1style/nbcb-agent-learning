@@ -26,6 +26,7 @@ class InputSanitizer:
     INJECTION_PATTERNS: ClassVar[list[str]] = [
         # 英文常见注入模式
         r"ignore\s+(all\s+)?(previous|above|prior)\s+(instructions|prompts?|commands?|directives?)",
+        r"ignore\s+all\s+(instructions|prompts?|commands?|directives?)",
         r"forget\s+(all\s+)?(previous|above)\s+(instructions|prompts?|commands?)",
         r"disregard\s+(all\s+)?(previous|above)\s+(instructions|prompts?|commands?)",
         r"override\s+(all\s+)?(instructions|prompts?|commands?)",

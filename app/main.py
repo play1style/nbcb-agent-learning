@@ -7,7 +7,10 @@ from __future__ import annotations
 
 import time
 
+from pathlib import Path
+
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -59,6 +62,16 @@ async def global_exception_handler(
             code="INTERNAL_ERROR",
         ).model_dump(),
     )
+
+
+@app.get("/", include_in_schema=False)
+async def serve_frontend() -> HTMLResponse:
+    """提供前端界面."""
+    static_dir = Path(__file__).parent / "static"
+    index_path = static_dir / "index.html"
+    if index_path.exists():
+        return HTMLResponse(index_path.read_text(encoding="utf-8"))
+    return HTMLResponse("<h1>前端文件未找到</h1>", status_code=404)
 
 
 @app.get("/health", tags=["系统"])
@@ -114,7 +127,6 @@ async def chat(request: ChatRequest) -> ChatResponse:
             injection_detected=response.injection_detected,
             answer_preview=response.answer[:200],
         )
-
 
         return response
 
