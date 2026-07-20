@@ -149,11 +149,12 @@ class ComplianceAgent:
             tool_descriptions=self._tool_descriptions,
             available_sources=_source_list,
         )
-
+        
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": query},
         ]
+        print(f"\n 第一轮LLM输入: {messages}")
 
         llm_response = llm_client.chat(
             messages=messages,
@@ -161,10 +162,14 @@ class ComplianceAgent:
             max_tokens=2048,
         )
         assistant_reply = llm_response["content"]
-
+        
+        print(f"\n 第一轮LLM输出: {assistant_reply}")
+        
         # Step 3: 检查是否需要调用工具
         tool_call = _parse_tool_call(assistant_reply)
-
+        
+        print(f"\n tool_call:[{tool_call}]")
+        
         max_loops = 3
         loop_count = 0
 
@@ -207,14 +212,18 @@ class ComplianceAgent:
                     ),
                 }
             )
-
+            
+            print(f"\n 第{loop_count + 1}轮LLM输入: {messages}")
+            
             llm_response = llm_client.chat(
                 messages=messages,
                 temperature=0.1,
                 max_tokens=2048,
             )
             assistant_reply = llm_response["content"]
-
+            
+            print(f"\n 第{loop_count + 1}轮LLM输出: {assistant_reply}")
+            
             # 检查是否还有新的工具调用
             tool_call = _parse_tool_call(assistant_reply)
 
