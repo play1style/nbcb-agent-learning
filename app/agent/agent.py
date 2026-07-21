@@ -163,7 +163,7 @@ class ComplianceAgent:
         )
         assistant_reply = llm_response["content"]
         
-        print(f"\n 第一轮LLM输出: {assistant_reply}")
+        print(f"\n 第一轮LLM输出: {llm_response}")
         
         # Step 3: 检查是否需要调用工具
         tool_call = _parse_tool_call(assistant_reply)

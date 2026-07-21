@@ -33,6 +33,7 @@ def search_policy(query: str) -> list[dict]:
         >>> results[0]["source_tag"]
         '[信贷业务制度:4.1]'
     """
+    print("调用search_policy工具开始==================")
     results: list[SearchResult] = retriever.retrieve(query)
 
     output = []

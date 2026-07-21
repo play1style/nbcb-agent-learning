@@ -37,6 +37,7 @@ def calculate_loan(
         >>> result["principal_wan"]
         100
     """
+    print("调用calculate_loan工具开始==================")
     # 校验参数
     if principal <= 0:
         raise ValueError("贷款本金必须大于0")
