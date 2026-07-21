@@ -64,9 +64,9 @@ class ComplianceAgent:
 
     def _build_llm(self) -> ChatOpenAI:
         return ChatOpenAI(
-            model=self.config.DEEPSEEK_MODEL,
-            api_key=self.config.DEEPSEEK_API_KEY,
-            base_url=self.config.DEEPSEEK_BASE_URL,
+            model=self.config.LLM_MODEL,
+            api_key=self.config.LLM_API_KEY,
+            base_url=self.config.LLM_API_BASE,
             temperature=self.config.TEMPERATURE,
             max_tokens=self.config.MAX_TOKENS,
         )

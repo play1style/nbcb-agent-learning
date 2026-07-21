@@ -17,12 +17,12 @@ class Config:
     """合规助手智能体的运行配置。所有核心参数集中在此维护。"""
 
     # ── DeepSeek API 配置 ──────────────────────────────────────────
-    DEEPSEEK_API_KEY: str = os.getenv("DEEPSEEK_API_KEY", "")
-    DEEPSEEK_BASE_URL: str = os.getenv(
-        "DEEPSEEK_API_BASE",
+    LLM_API_KEY: str = os.getenv("LLM_API_KEY", "")
+    LLM_API_BASE: str = os.getenv(
+        "LLM_API_BASE",
         "https://api.deepseek.com/v1")
-    DEEPSEEK_MODEL: str = os.getenv(
-        "DEEPSEEK_MODEL",
+    LLM_MODEL: str = os.getenv(
+        "LLM_MODEL",
         "deepseek-v4-flash")
 
     # ── 模型参数 ────────────────────────────────────────────────────

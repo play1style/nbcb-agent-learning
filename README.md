@@ -18,10 +18,13 @@ nbcb-agent-learning/
 │   ├── security.py           # 输入净化 & 输出脱敏
 │   ├── audit.py              # 审计日志（JSON Lines）
 │   ├── models.py             # Pydantic 请求/响应模型
-│   └── data/
-│       └── policies.json     # 知识库原始数据
+├── logs/                     # 审计日志
+│   └── audit.log
+├── data/
+│   └── policies.json         # 知识库原始数据
 ├── tests/
 │   └── test_agent.py         # 5 个验收测试用例
+├── .env                      # 环境变量配置（已配置git忽略）
 ├── requirements.txt
 └── README.md
 ```
@@ -47,16 +50,37 @@ nbcb-agent-learning/
 pip install -r requirements.txt
 ```
 
-### 2. 启动 API 服务
+### 2.配置环境变量
+
+将以下内容复制并将自己的`模型`以及`api-key`替换后，作为环境变量配置文件，新建`.env`文件到根目录下放置
+
+```properties
+# 模型及API配置(deepseek、kimi、智谱、千问等)
+LLM_API_KEY={YOUR_LLM_API_KEY}
+LLM_API_BASE=https://api.deepseek.com/v1
+LLM_MODEL=deepseek-v4-flash
+
+# 知识库配置
+KNOWLEDGE_BASE_PATH=data/policies.json
+
+# 服务器配置
+HOST=0.0.0.0
+PORT=8000
+DEBUG=false
+
+# 审计日志配置
+AUDIT_LOG_PATH=logs/audit.log
+```
+
+### 3. 启动 API 服务
 
 ```bash
 uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
-服务启动后会自动加载知识库并初始化 Agent（首次运行会下载约 470 MB 的 Embedding 模型，
-下载完成后会自动缓存）。
+服务启动后会自动加载知识库并初始化 Agent（首次运行会从huggingface下载约 470 MB 的 Embedding 模型，下载完成后会自动缓存，若无墙外环境会默认使用本地TF-IDF检索）。
 
-### 3. 调用示例
+### 4. 调用示例
 
 ```bash
 curl -X POST http://localhost:8000/api/chat \
