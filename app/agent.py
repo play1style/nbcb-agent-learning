@@ -3,14 +3,14 @@
 import json
 import logging
 import time
-from typing import Annotated, Any, Dict, List, Optional, Sequence, TypedDict
+from typing import Any, Dict, List
+from typing import Optional
 
-import operator
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage
 from langchain_core.tools import tool
 from langchain_openai import ChatOpenAI
-from langgraph.graph import END, StateGraph
-from langgraph.prebuilt import ToolNode
+from langgraph.checkpoint.memory import MemorySaver
+from langgraph.prebuilt import create_react_agent
 
 from .audit import AuditLogger
 from .config import Config
@@ -19,30 +19,12 @@ from .security import desensitize, sanitize_input
 
 logger = logging.getLogger(__name__)
 
-# ╔══════════════════════════════════════════════════════════════════╗
-# ║  图状态（AgentState）                                           ║
-# ╚══════════════════════════════════════════════════════════════════╝
-
-
-class AgentState(TypedDict):
-    """图状态——消息通过 operator.add 累积。"""
-    messages: Annotated[Sequence[BaseMessage], operator.add]
-
-
-# ╔══════════════════════════════════════════════════════════════════╗
-# ║  合规智能体（ComplianceAgent）                                  ║
-# ╚══════════════════════════════════════════════════════════════════╝
-
 
 class ComplianceAgent:
     """
     银行合规智能助手——通过检索增强生成（RAG）和计算工具回答合规问题。
 
-    内部构建了一个 LangGraph StateGraph，遵循 ReAct 循环：
-
-        agent  ──(是否调用工具?)──→  tools  ──→  agent
-           ↑                                    │
-           └──────── (无更多调用) ────────────────┘
+    内部使用 langgraph.prebuilt.create_react_agent 构建 ReAct 循环。
     """
 
     def __init__(self, kb: KnowledgeBase, config: Optional[Config] = None):
@@ -57,12 +39,13 @@ class ComplianceAgent:
 
         self.tools = self._build_tools()
         self.llm = self._build_llm()
-        self.llm_with_tools = self.llm.bind_tools(self.tools)
+        self.memory = MemorySaver()
         self.graph = self._build_graph()
 
     # ── 内部辅助方法 ──────────────────────────────────────────────
 
     def _build_llm(self) -> ChatOpenAI:
+        """创建 LLM 实例。"""
         return ChatOpenAI(
             model=self.config.LLM_MODEL,
             api_key=self.config.LLM_API_KEY,
@@ -131,35 +114,26 @@ class ComplianceAgent:
 
         return [search_policy, calculate_loan]
 
-    def _build_graph(self) -> StateGraph:
-        workflow = StateGraph(AgentState)
+    def _build_graph(self):
+        """
+        用 create_react_agent 构造 ReAct 图，替代手动 StateGraph + ToolNode。
 
-        workflow.add_node("agent", self._call_agent)
-        workflow.add_node("tools", ToolNode(self.tools))
+        prompt 参数是一个可调用函数，它会在每次 Agent 节点执行前运行：
+        - 首次会话：在消息列表头部注入系统提示词
+        - 后续轮次：系统提示词已在历史中，不作重复注入
+        """
+        def _ensure_prompt(state):
+            msgs = list(state["messages"])
+            if not any(isinstance(m, SystemMessage) for m in msgs[:5]):
+                msgs.insert(0, SystemMessage(content=self._system_prompt()))
+            return msgs
 
-        workflow.set_entry_point("agent")
-
-        workflow.add_conditional_edges(
-            "agent",
-            self._should_continue,
-            {"continue": "tools", "end": END},
+        return create_react_agent(
+            self.llm,
+            self.tools,
+            prompt=_ensure_prompt,
+            checkpointer=self.memory,
         )
-        workflow.add_edge("tools", "agent")
-
-        return workflow.compile()
-
-    def _call_agent(self, state: AgentState) -> Dict[str, List]:
-        """调用 LLM（绑定工具），返回下一条消息。"""
-        response = self.llm_with_tools.invoke(state["messages"])
-        return {"messages": [response]}
-
-    @staticmethod
-    def _should_continue(state: AgentState) -> str:
-        """判断 Agent 是否应继续循环（有工具调用则继续，否则结束）。"""
-        last = state["messages"][-1]
-        if isinstance(last, AIMessage) and hasattr(last, "tool_calls") and last.tool_calls:
-            return "continue"
-        return "end"
 
     # ── 系统提示词 ─────────────────────────────────────────────────
 
@@ -211,16 +185,16 @@ class ComplianceAgent:
             self.audit_logger.log(user_id, user_query, sanitized, [], answer, elapsed)
             return result
 
-        # ── 2. 运行 Agent 图 ─────────────────────────────────
-        initial: AgentState = {
-            "messages": [
-                SystemMessage(content=self._system_prompt()),
-                HumanMessage(content=sanitized),
-            ],
-        }
+        # ── 2. 运行 Agent 图（带跨轮记忆） ──────────────────
+        # MemorySaver + thread_id → 同 user_id 的多次调用自动累积会话历史
+        # prompt 回调（_ensure_prompt）会在每轮自动注入系统提示词，无需重复拼装
+        _config = {"configurable": {"thread_id": user_id}, "recursion_limit": 15}
 
         try:
-            final = self.graph.invoke(initial, {"recursion_limit": 15})
+            final = self.graph.invoke(
+                {"messages": [HumanMessage(content=sanitized)]},
+                _config,
+            )
         except Exception as exc:
             logger.exception("Agent graph invocation failed")
             elapsed = int((time.time() - start) * 1000)
