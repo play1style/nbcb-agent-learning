@@ -60,6 +60,11 @@ LLM_API_KEY={YOUR_LLM_API_KEY}
 LLM_API_BASE=https://api.deepseek.com/v1
 LLM_MODEL=deepseek-v4-flash
 
+# Embedding API 配置（外部 API 语义检索，本文配置为智谱embedding-3）
+EMBEDDING_API_KEY={YOUR_EMBEDDING_API_KEY}
+EMBEDDING_API_BASE=https://open.bigmodel.cn/api/paas/v4
+EMBEDDING_API_MODEL=embedding-3
+
 # 知识库配置
 KNOWLEDGE_BASE_PATH=data/policies.json
 

@@ -35,6 +35,11 @@ class Config:
     # ── 嵌入模型 ────────────────────────────────────────────────────
     EMBEDDING_MODEL = "paraphrase-multilingual-MiniLM-L12-v2"
 
+    # ── 外部 Embedding API ──────────────────────────────────────────
+    EMBEDDING_API_KEY: str = os.getenv("EMBEDDING_API_KEY", "")
+    EMBEDDING_API_BASE: str = os.getenv("EMBEDDING_API_BASE", "")
+    EMBEDDING_API_MODEL: str = os.getenv("EMBEDDING_API_MODEL", "")
+
     # ── 检索参数 ────────────────────────────────────────────────────
     SEARCH_TOP_K = 3
     SIMILARITY_THRESHOLD = 0.3

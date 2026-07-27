@@ -38,7 +38,7 @@ async def lifespan(app: FastAPI):
     config = Config()
 
     logger.info("Loading knowledge base …")
-    kb = KnowledgeBase(config.POLICY_FILE, config.EMBEDDING_MODEL)
+    kb = KnowledgeBase(config.POLICY_FILE, config.EMBEDDING_MODEL, config=config)
 
     logger.info("Initialising compliance agent …")
     _agent = ComplianceAgent(kb, config)
