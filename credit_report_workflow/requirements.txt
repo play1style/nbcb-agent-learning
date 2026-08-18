@@ -1,0 +1,3 @@
+# Python 标准库即可运行；若需真实调用 LLM，请设置环境变量 LLM_API_KEY
+# 可选安装 requests 以获得更友好的调试体验（非必须）：
+# requests

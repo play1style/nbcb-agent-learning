@@ -1,0 +1,29 @@
+{
+  "rules": [
+    {
+      "id": "receivable_days_high",
+      "source": "input",
+      "metric": "receivable_days",
+      "operator": "gt",
+      "value": 100,
+      "message": "应收账款周转天数超过100天，行业账期较长，回款风险需重点关注"
+    },
+    {
+      "id": "debt_ratio_high",
+      "source": "financial",
+      "metric": "资产负债率",
+      "operator": "gt",
+      "value": 50,
+      "message": "资产负债率超过50%，杠杆水平偏高"
+    },
+    {
+      "id": "net_margin_low",
+      "source": "financial",
+      "metric": "销售净利率",
+      "operator": "lte",
+      "value": 6,
+      "message": "销售净利率偏低，议价能力或成本控制能力需关注"
+    }
+  ],
+  "no_risk_message": "整体财务指标处于正常区间"
+}
