@@ -1,3 +1,2 @@
-# Python 标准库即可运行；若需真实调用 LLM，请设置环境变量 LLM_API_KEY
-# 可选安装 requests 以获得更友好的调试体验（非必须）：
-# requests
+# 核心计算逻辑仅使用 Python 标准库；python-dotenv 用于读取 .env 配置
+python-dotenv>=1.0.0

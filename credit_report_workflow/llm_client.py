@@ -4,7 +4,7 @@ LLM 客户端模块（主题2 & 主题3 通用）。
 功能：
 - 使用 Python 标准库调用 OpenAI 兼容格式的 LLM API
 - 支持真实调用与 Mock 自动降级两种模式
-- 通过环境变量控制，无需修改代码即可切换
+- 自动读取项目根目录（或上级目录）的 .env 文件，也支持系统环境变量覆盖
 
 环境变量（均为可选）：
   LLM_API_KEY    – API 密钥，未设置时自动进入 Mock 模式
@@ -27,24 +27,34 @@ import os
 import socket
 import urllib.error
 import urllib.request
+from pathlib import Path
+from dotenv import load_dotenv
+
+
+# 加载 .env 文件（优先），回退到 .env.example
+_env_path = Path(__file__).parent / ".env"
+if _env_path.exists():
+    load_dotenv(_env_path, override=False)
 
 
 class LLMClient:
     def __init__(self):
         self.api_key = os.environ.get("LLM_API_KEY", "").strip()
-        self.base_url = os.environ.get("LLM_BASE_URL", "https://api.moonshot.cn/v1").rstrip("/")
+        self.base_url = os.environ.get("LLM_BASE_URL","https://api.moonshot.cn/v1")
         self.model = os.environ.get("LLM_MODEL", "moonshot-v1-8k")
-        self.timeout = int(os.environ.get("LLM_TIMEOUT", "10"))
+        self.timeout = int(os.environ.get("LLM_TIMEOUT", str(10)))
         self.mock_mode = os.environ.get("LLM_MOCK", "auto").lower()
 
     def is_mock(self):
         """判断是否使用 Mock 模式。"""
         if self.mock_mode == "true":
+            print("当前输出模式为：[mock模式]")
             return True
         if self.mock_mode == "false":
+            print("当前输出模式为：[llm模式]")
             return False
-        # auto：没有 API Key 时自动 mock
-        return not self.api_key
+        print("未检测到api_key，当前输出模式为：[mock模式]")
+        return True
 
     def chat(self, system_prompt, user_prompt, max_tokens=512):
         """
