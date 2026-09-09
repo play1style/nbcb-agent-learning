@@ -10,12 +10,16 @@ def main():
     agent = CreditQAAgent()
     persistence = Persistence()
 
+    # questions = [
+    #     "宁波银行有哪些企业贷款？",
+    #     "小微企业适合哪个？",
+    #     "需要什么材料？",
+    # ]
     questions = [
-        "宁波银行有哪些企业贷款？",
-        "小微企业适合哪个？",
-        "需要什么材料？",
+            "宁波银行有哪些企业贷款？",
+            "供应链金融适合哪种企业？",
+            "申请需要什么材料？",
     ]
-
     for q in questions:
         print(f"用户：{q}")
         answer = agent.ask(q)

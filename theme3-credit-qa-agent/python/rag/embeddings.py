@@ -91,16 +91,16 @@ class ApiEmbedder:
 
 def create_embedder():
     """按优先级创建嵌入组件；均不可用时返回 None（由上层降级为 BM25）。"""
-    # 1. 本地 sentence-transformers 模型
-    try:
-        import sentence_transformers  # noqa: F401
+    # # 1. 本地 sentence-transformers 模型
+    # try:
+    #     import sentence_transformers  # noqa: F401
 
-        embedder = SentenceTransformerEmbedder()
-        embedder.embed(["探测"])  # 探测模型可用性（含模型下载）
-        print(f"[RAG] 嵌入组件：{embedder.name}")
-        return embedder
-    except Exception as e:
-        print(f"[RAG] 本地嵌入模型不可用（{type(e).__name__}），尝试 Embedding API…")
+    #     embedder = SentenceTransformerEmbedder()
+    #     embedder.embed(["探测"])  # 探测模型可用性（含模型下载）
+    #     print(f"[RAG] 嵌入组件：{embedder.name}")
+    #     return embedder
+    # except Exception as e:
+    #     print(f"[RAG] 本地嵌入模型不可用（{type(e).__name__}），尝试 Embedding API…")
 
     # 2. OpenAI 兼容 Embedding API
     api_key = os.environ.get("EMBEDDING_API_KEY") or os.environ.get("LLM_API_KEY", "")

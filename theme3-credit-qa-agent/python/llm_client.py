@@ -62,6 +62,7 @@ class LLMClient:
             return None
 
         try:
+            # print(f"=====================用户提示词如下：\n{user_prompt}")
             url = f"{self.base_url}/chat/completions"
             headers = {
                 "Content-Type": "application/json",
