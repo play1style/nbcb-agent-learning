@@ -1,0 +1,16 @@
+# ---------- RAG 组件依赖 ----------
+# 嵌入组件（二选一，均不装时自动降级为 BM25 稀疏检索，仍可运行）：
+# 1) 本地嵌入模型（推荐，首次下载后离线可用，适合银行内网）：
+#    pip install sentence-transformers
+# sentence-transformers>=2.2
+# 2) OpenAI 兼容 Embedding API：无需安装包，配置环境变量即可
+#    EMBEDDING_API_KEY / EMBEDDING_BASE_URL / EMBEDDING_MODEL
+
+# ---------- 向量库 ----------
+# 默认使用 numpy 实现的余弦索引（已够用）；生产可替换为：
+# faiss-cpu  /  milvus  /  pgvector  /  elasticsearch
+
+# ---------- LLM 润色（可选） ----------
+# 标准库即可调用 OpenAI 兼容 Chat API，设置 LLM_API_KEY 即启用；
+# 未设置时自动降级为"检索结果组装"的模板回答，代码始终可运行。
+numpy>=1.21
